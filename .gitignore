@@ -1,10 +1,12 @@
 *.py[cod]
 
+img.jpg
 .DS_Store
 
 # C extensions
 *.so
 
+test.py
 # Packages
 *.egg
 *.egg-info
