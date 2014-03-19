@@ -1,24 +1,20 @@
 #!/usr/bin/python
 
-from cv2 import *
-from optparse import *
-import numpy as np
-import pylab as plt
-
 import os.path
+import optparse
+
+import cv2
+import numpy as np
 
 
-class ImageBase(object):
-    img = None
-    __ref_img = None
 
+class TImage(object):
     window_height = 800.0
 
-
     def __init__(self, path_to_img):
-        super(ImageBase, self).__init__()
+        super(TImage, self).__init__()
 
-        img = imread(path_to_img, CV_LOAD_IMAGE_GRAYSCALE)
+        img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
 
         try:
             if not img.all():
@@ -33,49 +29,47 @@ class ImageBase(object):
     def render(self, window_name="main", img = None):
         if not img:
             img = self.img
-
         scale = self.window_height / img.shape[0]
 
-        destroyAllWindows()
-        namedWindow(window_name)
-        imshow(window_name, resize(img, None, fx=0.3, fy=0.3, interpolation=INTER_CUBIC))
-        waitKey(0)
+        cv2.destroyAllWindows()
+        cv2.namedWindow(window_name)
+        cv2.imshow(window_name, cv2.resize(img, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_CUBIC))
+        cv2.waitKey(0)
 
 
-class PreprocessImage(ImageBase):
+class ChainUnit(object):
+    __next = None
 
-    __threshold = 150
+    def add(self, next):
+        self.__next = next
+        return self
 
-    def __init__(self, path_to_img):
-        super(PreprocessImage, self).__init__(path_to_img)
+    def handle(self, img):
+        if self.__next:
+            self.__next.handle(img)
 
-        self.apply_blur()
-        self.apply_threshold()
-        self.apply_denoise()
-        self.apply_morphologyEx()
 
-    def apply_adaptiveThreshold(self) :
-        print  "Apply adaptiveThreshold ... "
-        self.img = adaptiveThreshold(self.img, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 15, 10)
+class Preprossing(ChainUnit):
+    threshold = 150
 
-    def apply_blur(self):
+    def apply_blur(self, t):
         print  "Apply blur ... "
-        self.img = blur(self.img, (3,3))
+        t.img = cv2.blur(t.img, (3,3))
 
-    def apply_threshold(self) :
+    def apply_threshold(self, t) :
         print  "Apply threshold ... "
-        retval, self.img = threshold( self.img, self.__threshold, 255, THRESH_BINARY_INV | THRESH_OTSU )
-        #threshold( self.img, self.img, 100, 255, THRESH_OTSU )
+        retval, t.img = cv2.threshold( t.img, self.threshold, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU )
+        #threshold( t.img, t.img, 100, 255, THRESH_OTSU )
 
-    def apply_denoise(self):
+    def apply_denoise(self, t):
         print  "Apply denoise ... "
-        (contours, hierarchy) =  findContours( self.img, RETR_CCOMP, CHAIN_APPROX_NONE )
+        (contours, hierarchy) =  cv2.findContours( t.img, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE )
 
-        self.img = np.ones(self.img.shape, np.uint8) * 255
-        color_parent = [0] * self.channels()
-        color_child = [255] * self.channels()
+        t.img = np.ones(t.img.shape, np.uint8) * 255
+        color_parent = [0] * t.channels()
+        color_child = [255] * t.channels()
         for i in range(len(contours)):
-            area = contourArea(contours[i])
+            area = cv2.contourArea(contours[i])
             if area > 5 and area < 10000:
                 #print hierarchy
                 if hierarchy[0,i, 3] == -1:
@@ -84,18 +78,46 @@ class PreprocessImage(ImageBase):
                     color = color_child
 
                 #color = Scalar( rand()&255, rand()&255, rand()&255 )
-                #drawContours( self.img, contours, i, color, CV_FILLED, 8, hierarchy, 0, Point() )
-                drawContours( self.img, contours, i, color, -1, 8, hierarchy, 0, None )
+                #drawContours( t.img, contours, i, color, CV_FILLED, 8, hierarchy, 0, Point() )
+                cv2.drawContours( t.img, contours, i, color, -1, 8, hierarchy, 0, None )
 
-    def apply_morphologyEx(self) :
+    def apply_morphologyEx(self, t) :
         print  "Apply morphologyEx ... "
-        element = getStructuringElement( MORPH_CROSS, (3, 3), (1, 1))
-        self.img = morphologyEx(self.img,  MORPH_CLOSE, element)
-    
+        element = cv2.getStructuringElement( cv2.MORPH_CROSS, (3, 3), (1, 1))
+        t.img = cv2.morphologyEx(t.img,  cv2.MORPH_CLOSE, element)
+
+    def prepare(self, timage):
+        # ToDo(Make chain as in wiki.)
+        self.apply_blur(timage)
+        self.apply_threshold(timage)
+        self.apply_denoise(timage)
+        self.apply_morphologyEx(timage)
+
+        timage.render()
+
+    def handle(self, timage):
+        print "Preprossing..."
+        self.prepare(timage)
+        super(Preprossing, self).handle(timage)
+
+
+class Extraction(ChainUnit):
+
+    def handle(self, timage):
+        print "Extraction"
+        super(Extraction, self).handle(timage)
+
+
+class Recognition(ChainUnit):
+
+    def handle(self, timage):
+        print "Recognition"
+        super(Recognition, self).handle(timage)
+
 
 def parse_input():
     usage = "usage: %prog [options] arg1"
-    parser = OptionParser(usage)
+    parser = optparse.OptionParser(usage)
     parser.add_option("-i", "--image", dest="path_to_image",
                   help="Path to image.", metavar="path_to_image")
 
@@ -110,11 +132,10 @@ def parse_input():
     return options
 
 
-
 if __name__ == '__main__':
-    opt = parse_input()
+    opts = parse_input()
 
-    timage = PreprocessImage(opt.path_to_image)
-    timage.render()
+    timage = TImage(opts.path_to_image)
 
-
+    chain = Preprossing().add(Extraction().add(Recognition()))
+    chain.handle(timage)
