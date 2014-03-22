@@ -34,7 +34,7 @@ class TImage(object):
 
         cv2.destroyAllWindows()
         cv2.namedWindow(window_name)
-        cv2.imshow(window_name, cv2.resize(img, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_CUBIC))
+        cv2.imshow(window_name, cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC))
         cv2.waitKey(0)
 
 
@@ -43,7 +43,7 @@ class ChainUnit(object):
 
     def add(self, next):
         self.__next = next
-        return self
+        return next
 
     def handle(self, img):
         if self.__next:
@@ -81,7 +81,6 @@ class Preprossing(ChainUnit):
                 else:
                     color = color_child
 
-                # color = cv2.Scalar( rand()&255, rand()&255, rand()&255 )
                 # cv2.drawContours( t.ref_img, contours, i, color, 1, 8, hierarchy, 0, None )
                 cv2.drawContours( t.img, contours, i, color, -1, 8, hierarchy, 0, None )
 
@@ -118,13 +117,13 @@ class Extraction(ChainUnit):
         cv2.rectangle(img, tl, br, color, 2, 8, 0);
 
     def detectObjects(self, t):
-        self.__log("Detecting counturs...")
+        self.__log("Detecting contours...")
 
         # Create RGB blank image
-        blank_image = np.ones(t.img.shape, np.uint8) * 0
+        blank_image = np.zeros(t.img.shape, np.uint8)
         blank_image = cv2.cvtColor( blank_image, cv2.COLOR_GRAY2BGR );
 
-        (w, h, c) = blank_image.shape
+        (h, w, c) = blank_image.shape
 
         # Draw pagination search area
         target_area = ((2* w/3), 0, w/3, h/5)
@@ -133,6 +132,7 @@ class Extraction(ChainUnit):
         # Compute contours
         contours, hierarchy = cv2.findContours(t.img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # cv2.drawContours(blank_image, contours, -1, [255, 255, 255], -1, maxLevel=1)
+        cv2.drawContours(t.img, contours, -1, [255], -1, maxLevel=1)
 
         # Rectangles which passed selection
         target_rects = []
@@ -142,12 +142,13 @@ class Extraction(ChainUnit):
             length = cv2.arcLength(contour, closed=True)
 
             # Check for compactness ( area and length ratio)
-            if 10 > (float(area) / float(length)) > 2:
+            if float(length) > 0 and 10 > (float(area) / float(length)) > 2:
                 contour_poly = cv2.approxPolyDP(contour, 4 , True)
                 bound_rect = cv2.boundingRect(contour_poly)
+                (w, h) = bound_rect[2:]
 
                 # Width and height ratio
-                if 0.2 < (float(w) / float(h)) < 7:
+                if 0.1 < (float(w) / float(h)) < 7:
                     self.drawRect(bound_rect, blank_image)
                     # cv2.drawContours(blank_image, contour, -1, [255, 255, 255], -1, maxLevel=1)
 
@@ -191,5 +192,6 @@ if __name__ == '__main__':
 
     timage = TImage(opts.path_to_image)
 
-    chain = Preprossing().add(Extraction().add(Recognition()))
+    chain = ChainUnit()
+    chain.add(Preprossing()).add(Extraction()).add(Recognition())
     chain.handle(timage)
