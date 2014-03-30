@@ -1,107 +1,10 @@
-#!/usr/bin/python
 
-import os.path
-import optparse
 import operator
 
 import cv2
 import numpy as np
 
-
-
-class TImage(object):
-    window_height = 800.0
-
-    def __init__(self, path_to_img):
-        super(TImage, self).__init__()
-
-        img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-
-        try:
-            if not img.all():
-                raise IOError("No image data \n")
-        except AttributeError:
-            raise IOError("No image data \n")
-
-        self.img = img
-        self.ref_img = img
-        self.channels = lambda: 1 if len(self.img.shape) == 2 else self.img.shape[2]
-
-    def render(self, window_name="main", img = None):
-        if img == None:
-            img = self.img
-        scale = self.window_height / img.shape[0]
-
-        cv2.destroyAllWindows()
-        cv2.namedWindow(window_name)
-        cv2.imshow(window_name, cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC))
-        cv2.waitKey(0)
-
-
-class ChainUnit(object):
-    __next = None
-
-    def add(self, next):
-        self.__next = next
-        return next
-
-    def handle(self, img):
-        if self.__next:
-            self.__next.handle(img)
-
-
-class Preprocessing(ChainUnit):
-    threshold = 150
-
-    def __log(self, msg):
-        print "[Preprocessing] => ", msg
-
-    def apply_blur(self, t):
-        self.__log("Apply blur ... ")
-        t.img = cv2.blur(t.img, (3,3))
-
-    def apply_threshold(self, t) :
-        self.__log("Apply threshold ... ")
-        retval, t.img = cv2.threshold( t.img, self.threshold, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU )
-        #threshold( t.img, t.img, 100, 255, THRESH_OTSU )
-
-    def apply_denoise(self, t):
-        self.__log("Apply denoise ... ")
-        (contours, hierarchy) =  cv2.findContours( t.img, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE )
-
-        t.img = np.ones(t.img.shape, np.uint8) * 255
-        color_parent = [0] * t.channels()
-        color_child = [255] * t.channels()
-        for i in range(len(contours)):
-            area = cv2.contourArea(contours[i])
-            if area > 5 and area < 10000:
-                #print hierarchy
-                if hierarchy[0,i, 3] == -1:
-                    color = color_parent
-                else:
-                    color = color_child
-
-                # cv2.drawContours( t.ref_img, contours, i, color, 1, 8, hierarchy, 0, None )
-                cv2.drawContours( t.img, contours, i, color, -1, 8, hierarchy, 0, None )
-
-    def apply_morphologyEx(self, t) :
-        self.__log("Apply morphologyEx ... ")
-        element = cv2.getStructuringElement( cv2.MORPH_CROSS, (3, 3), (1, 1))
-        t.img = cv2.morphologyEx(t.img,  cv2.MORPH_CLOSE, element)
-
-    def prepare(self, timage):
-        # ToDo(Make chain as in wiki.)
-        self.apply_blur(timage)
-        self.apply_threshold(timage)
-        self.apply_morphologyEx(timage)
-        self.apply_denoise(timage)
-
-        # timage.render()
-
-    def handle(self, timage):
-        print "Preprocessing..."
-        self.prepare(timage)
-        super(Preprocessing, self).handle(timage)
+from misc.ChainUnit import ChainUnit
 
 
 class Extraction(ChainUnit):
@@ -129,21 +32,22 @@ class Extraction(ChainUnit):
 
         timage.render(img=blank_image)
 
+
         super(Extraction, self).handle(timage)
 
     def kmeans(self, rects):
         """
         Input: List of rects
-        OUTPUT: List of clusters.
+        OUTPUT: List of clusters. 
         Use opencv kmeans.
         """
         points = np.vstack([ list(item[:2]) for item in rects])
 
-        temp, classified_points, centroids = cv2.kmeans(data=np.array(points, np.float32),
-                                            K=2,
+        temp, classified_points, centroids = cv2.kmeans(data=np.array(points, np.float32), 
+                                            K=2, 
                                             bestLabels=None,
-                                            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 1, 10),
-                                            attempts=1,
+                                            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 1, 10), 
+                                            attempts=1, 
                                             flags=cv2.KMEANS_PP_CENTERS)   # KMEANS_RANDOM_CENTERS KMEANS_PP_CENTERS
 
         return classified_points, centroids
@@ -194,7 +98,7 @@ class Extraction(ChainUnit):
     def find_contours_bounding_rects(self, gray_scale_img):
         """
         Input: Grayscale MAT
-        OUTPUT: List of filtered bounding rects
+        OUTPUT: List of filtered bounding rects 
         # OUTPUT: Generator of filtered bounding rects list
         """
         contours, hierarchy = cv2.findContours(gray_scale_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -219,7 +123,7 @@ class Extraction(ChainUnit):
         return target_bound_rects
 
     def __log(self, msg):
-        print "[Extraction] => ", msg
+        print "[Preprocessing] => ", msg
 
     def draw_rect(self, rect, img, color=[255, 0, 255]):
         (w, h) = rect[2:]
@@ -293,36 +197,3 @@ class Extraction(ChainUnit):
             self.draw_rect(rect, blank_image, color=color)
 
         t.render(img=blank_image)
-
-class Recognition(ChainUnit):
-
-    def handle(self, timage):
-        print "Recognition"
-        super(Recognition, self).handle(timage)
-
-
-def parse_input():
-    usage = "usage: %prog [options] arg1"
-    parser = optparse.OptionParser(usage)
-    parser.add_option("-i", "--image", dest="path_to_image",
-                  help="Path to image.", metavar="path_to_image")
-
-    (options, args) = parser.parse_args()
-
-    if (options.path_to_image is None):
-        parser.print_help()
-        exit(-1)
-    elif not os.path.exists(options.path_to_image):
-        parser.error('image does not exists')
-
-    return options
-
-
-if __name__ == '__main__':
-    opts = parse_input()
-
-    timage = TImage(opts.path_to_image)
-
-    chain = ChainUnit()
-    chain.add(Preprocessing()).add(Extraction()).add(Recognition())
-    chain.handle(timage)
