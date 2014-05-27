@@ -3,6 +3,7 @@
 img.jpg
 img
 .DS_Store
+*~
 
 # C extensions
 *.so
