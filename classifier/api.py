@@ -1,6 +1,8 @@
+import os, sys
+#print os.path.dirname(os.path.abspath(__file__))
 from svmutil import *
 
-m = svm_load_model('classifier/mnist_probability.model')
+m = svm_load_model('%(classifier)s/mnist_probability.model' % {'classifier': os.path.dirname(os.path.abspath(__file__))})
 label_order = m.get_labels()
 reverse_label_order = [i[0] for i in sorted(enumerate(label_order), key=lambda x:x[1])]
 
