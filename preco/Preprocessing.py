@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import cv2
 import numpy as np
@@ -25,10 +26,11 @@ class Preprocessing(ChainUnit):
 
         t.img = np.ones(t.img.shape, np.uint8) * 255
         color_parent = [0] * t.channels()
-        color_child = [255] * t.channels()
+        color_child = [0] * t.channels()
         for i in range(len(contours)):
+            if i == 0: continue
             area = cv2.contourArea(contours[i])
-            if area > 5 and area < 10000:
+            if area > 100 and area < 10000:
                 #print hierarchy
                 if hierarchy[0,i, 3] == -1:
                     color = color_parent
@@ -41,7 +43,7 @@ class Preprocessing(ChainUnit):
     def apply_morphologyEx(self, t) :
         self.__log("Apply morphologyEx ... ")
         element = cv2.getStructuringElement( cv2.MORPH_CROSS, (3, 3), (1, 1))
-        t.img = cv2.morphologyEx(t.img,  cv2.MORPH_CLOSE, element)
+        t.img = cv2.morphologyEx(t.img,  cv2.MORPH_OPEN, element)
 
     def prepare(self, timage):
         # ToDo(Make chain as in wiki.)
@@ -50,7 +52,7 @@ class Preprocessing(ChainUnit):
         self.apply_morphologyEx(timage)
         self.apply_denoise(timage)
 
-        # timage.render()
+        timage.render()
 
     def handle(self, timage):
         print "Preprocessing..."

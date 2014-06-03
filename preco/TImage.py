@@ -8,16 +8,16 @@ class TImage(object):
     def __init__(self, path_to_img):
         super(TImage, self).__init__()
 
-        img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-
+        img = cv2.imread(path_to_img)
         try:
             if not img.all():
                 raise IOError("No image data \n")
         except AttributeError:
             raise IOError("No image data \n")
 
-        self.img = img
         self.ref_img = img
+
+        self.img = cv2.cvtColor( img, cv2.COLOR_BGR2GRAY );
         self.channels = lambda: 1 if len(self.img.shape) == 2 else self.img.shape[2]
 
     def render(self, window_name="main", img = None):
