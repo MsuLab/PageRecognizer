@@ -1,10 +1,14 @@
+# -*- coding: utf-8 -*-
 
 import operator
 
+import cv
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 
 from misc.ChainUnit import ChainUnit
+
 
 
 class Extraction(ChainUnit):
@@ -25,13 +29,14 @@ class Extraction(ChainUnit):
 
         target_rects = self.find_contours_bounding_rects(timage.img)
 
-        pagination_rects = self.find_pagination_regard_rects(target_rects, 3)
+        pagination_rects = self.find_pagination_regard_rects(target_rects, 2)
 
-        for rect in pagination_rects:
-            self.draw_rect(rect, blank_image, color=(255,0,0))
+        timage.img = cv2.cvtColor( timage.img, cv2.COLOR_GRAY2BGR );
+        for i,rect in enumerate(pagination_rects):
 
-        timage.render(img=blank_image)
+            self.draw_rect(rect, timage.img, color=[0,0,250])
 
+        timage.render()
 
         super(Extraction, self).handle(timage)
 
@@ -102,6 +107,7 @@ class Extraction(ChainUnit):
         # OUTPUT: Generator of filtered bounding rects list
         """
         contours, hierarchy = cv2.findContours(gray_scale_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(gray_scale_img, contours, -1, [255], -1, maxLevel=1)
 
         target_bound_rects = []
 

@@ -33,5 +33,9 @@ if __name__ == '__main__':
     timage = TImage(opts.path_to_image)
 
     chain = ChainUnit()
-    chain.add(Preprocessing()).add(Extraction()).add(Recognition())
+    chain \
+        .add(Preprocessing()) \
+        .add(Extraction()) \
+        .add(Recognition() \
+    )
     chain.handle(timage)
