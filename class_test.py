@@ -2,6 +2,7 @@
 
 import os.path
 import optparse
+import cv2
 
 from preco.TImage import TImage
 
@@ -29,5 +30,6 @@ if __name__ == '__main__':
     opts = parse_input()
 
     timage = TImage(opts.path_to_image)
-    z = [px / 255.0 for px in timage.img.flatten('C').tolist()]
+    #img = cv2.resize(timage.img, (28, 28));
+    z = [px / 255.0 for px in cv2.resize(timage.img, (28, 28)).flatten('C').tolist()]
     print classify(z)
