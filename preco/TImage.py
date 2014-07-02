@@ -10,13 +10,14 @@ class TImage(object):
         #print path_to_img
 
     
-        img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+        #img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+        img = cv2.imread(path_to_img)
 
-        try:
+        """try:
             if not img.all():
                 raise IOError("No image data \n")
         except AttributeError:
-            raise IOError("No image data \n")
+            raise IOError("No image data \n")"""
 
         self.ref_img = img
 
