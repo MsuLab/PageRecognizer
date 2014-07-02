@@ -7,14 +7,16 @@ class TImage(object):
 
     def __init__(self, path_to_img):
         super(TImage, self).__init__()
+        #print path_to_img
 
         img = cv2.imread(path_to_img, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+        #print type(img)
 
-        try:
+        """try:
             if not img.all():
                 raise IOError("No image data \n")
         except AttributeError:
-            raise IOError("No image data \n")
+            raise IOError("No image data \n")"""
 
         self.img = img
         self.ref_img = img

@@ -13,7 +13,7 @@
 Обучение модели:
 1. Скачайте выборку MNIST (http://yann.lecun.com/exdb/mnist/), для обучения используются только файлы train-images-idx3-ubyte.gz и train-labels-idx1-ubyte.gz.
 2. Создайте в данной папке папку mnist-set.
-3. Распакуйте скачанные архиву в папку mnist-set.
+3. Распакуйте скачанные архивы в папку mnist-set.
 4. Запустите файл model_train.py. В папке создастся обученная модель (файл mnist_probability.model), которая используется классификатором, точность при тестировании составила 97%. После этого mnist-set можно удалить.
 
 Для парсинга MNIST используется https://github.com/sorki/python-mnist.

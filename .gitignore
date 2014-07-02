@@ -2,8 +2,12 @@
 
 img.jpg
 img
+*.jpg
+*.png
 .DS_Store
 *~
+classifier/mnist-set
+classifier/mnist_probability.model
 
 # C extensions
 *.so
