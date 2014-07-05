@@ -10,6 +10,7 @@ ARIAL.TTF
 *~
 classifier/mnist-set
 classifier/mnist_probability.model
+trash
 
 # C extensions
 *.so
